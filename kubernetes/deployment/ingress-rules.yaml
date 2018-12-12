@@ -9,5 +9,5 @@ spec:
   - http:
       paths:
       - backend:
-          serviceName: sympo-demo-app
+          serviceName: sympo-demo-svc
           servicePort: 8182
