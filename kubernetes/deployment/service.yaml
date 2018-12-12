@@ -11,6 +11,6 @@ spec:
     tier: web
     env: prod
   ports:
-  - port: 3000
-    targetPort: 8119
+  - port: 5000
+    targetPort: 3000
   type: ClusterIP
