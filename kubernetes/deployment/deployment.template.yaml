@@ -1,7 +1,7 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: sympo-demo-app
+  name: sympo-demo-app-deployment
   labels:
     app: sympo-demo-app
 spec:
