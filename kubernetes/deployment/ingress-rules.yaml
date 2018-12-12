@@ -10,4 +10,4 @@ spec:
       paths:
       - backend:
           serviceName: sympo-demo-svc
-          servicePort: 8182
+          servicePort: 3000
