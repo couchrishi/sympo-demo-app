@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: sympo-demo-app
+  labels:
+    app: sympo-demo-app
+spec:
+  template:
+    metadata:
+      labels:
+        app: sympo-demo-app
+        env: prod
+        tier: web
+    spec:
+      imagePullSecrets:
+      - name: $OCIR_SECRET_NAME
+      containers:
+      - name: sympo-demo-app
+        image: $OCIR_PATH/$OCI_TENANCY_NAME/$OCIR_REPO_NAME/$APP_NAME:${WERCKER_GIT_BRANCH}-${WERCKER_GIT_COMMIT}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8182

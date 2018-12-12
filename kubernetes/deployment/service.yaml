@@ -1,0 +1,16 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sympo-demo-svc
+  labels:
+    app: sympo-demo-app
+spec:
+  selector:
+    app: sympo-demo-app
+    tier: web
+    env: prod
+  ports:
+  - port: 8182
+    targetPort: 8119
+  type: ClusterIP

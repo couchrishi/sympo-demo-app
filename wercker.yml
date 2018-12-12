@@ -1,15 +1,119 @@
 box: node:6.10
+
+dev:
+  steps:
+    - npm-install
+    - internal/watch:
+        code: node app.js
+        reload: true
+
+  after-steps:
+    - install-packages:
+        packages: ruby
+    - pasonatquila/pretty-slack-notify@0.3.6:
+        webhook_url: $SLACK_URL
+        channel: $SLACK_CHANNEL
 build:
   steps:
+    - script:
+        code: export NODE_ENV='testing'
     # A step that executes `npm install` command
     - npm-install
-push:
+    # A step that executes `npm test` command
+    #- npm-test
+
+    # A custom script step, name value is used in the UI
+    # and the code value contains the command that get executed
+    - script:
+        name: echo nodejs information
+        code: |
+          echo "node version $(node -v) running"
+          echo "npm version $(npm -v) running"
+
+  after-steps:
+    - install-packages:
+        packages: ruby
+    - pasonatquila/pretty-slack-notify@0.3.6:
+        webhook_url: $SLACK_URL
+        channel: $SLACK_CHANNEL
+
+docker-build:
+  # Step to build and push docker image
   steps:
-    # Push to public docker repo
-    - internal/docker-push:
-        username: $DOCKER_USERNAME
-        password: $DOCKER_PASSWORD
-        tag: $DOCKER_TAG
-        repository: $DOCKER_REPOSITORY
-        registry: https://index.docker.io/v2/
-        cmd: node pipeline/source/app.js
+   - internal/docker-build:
+       dockerfile: Dockerfile
+       image-name: $APP_NAME
+   - internal/docker-push:
+         image-name: $APP_NAME
+         username: $OCIRREGISTRY_USERNAME
+         password: $OCI_API_USER_TOKEN
+         repository: $TENANCY_NAME/$REPO_NAME/$APP_NAME
+         registry: $PRIVATE_REGISTRY_PATH 
+         tag: ${WERCKER_GIT_BRANCH}-${WERCKER_GIT_COMMIT},latest
+
+  after-steps:
+    - install-packages:
+        packages: ruby
+    - pasonatquila/pretty-slack-notify@0.3.6:
+        webhook_url: $SLACK_URL
+        channel: $SLACK_CHANNEL
+
+deploy:
+  steps:
+      - script:
+          name: debug
+          code: |
+            echo $WERCKER_OUTPUT_DIR
+            ls -l $WERCKER_OUTPUT_DIR
+            echo $WERCKER_ROOT
+            ls -l $WERCKER_ROOT
+
+      - bash-template:
+          cwd: $WERCKER_ROOT/kubernetes/deployment
+
+      - script:
+          name: Remove template files
+          cwd: $WERCKER_ROOT/kubernetes/deployment
+          code: |
+            rm *.template.yaml
+
+      - script:
+          name: debug
+          cwd: $WERCKER_ROOT/kubernetes/deployment
+          code: |
+            ls -l
+        
+      - script:
+          name: echo tags
+          code: |
+            cat $WERCKER_ROOT/kubernetes/deployment/deployment.yaml
+            echo "Docker image and tag:"
+            echo "${WERCKER_GIT_BRANCH}-${WERCKER_GIT_COMMIT}"
+            
+      - kubectl:
+         server: $KUBE_ENDPOINT
+         token: $KUBE_USER_TOKEN
+         insecure-skip-tls-verify: true
+         cwd: $WERCKER_ROOT/kubernetes/
+         command: delete secret $OCIR_SECRET_NAME
+
+      - kubectl:
+         server: $KUBE_ENDPOINT
+         token: $KUBE_USER_TOKEN
+         insecure-skip-tls-verify: true
+         cwd: $WERCKER_ROOT/kubernetes/
+         command: create secret docker-registry $OCIR_SECRET_NAME --docker-server='${PRIVATE_REGISTRY_PATH}' --docker-username=$CONTAINER_REGISTRY_USERNAME --docker-password='${API_USER_TOKEN}' --docker-email='saibalaji.rajaraman@outlook.com' 
+
+      - kubectl:
+         server: $KUBE_ENDPOINT
+         token: $KUBE_USER_TOKEN
+         insecure-skip-tls-verify: true
+         cwd: $WERCKER_ROOT/kubernetes/deployment
+         command: apply -f .
+
+  after-steps:
+    - install-packages:
+        packages: ruby
+    - pasonatquila/pretty-slack-notify@0.3.6:
+        webhook_url: $SLACK_URL
+        channel: $SLACK_CHANNEL
